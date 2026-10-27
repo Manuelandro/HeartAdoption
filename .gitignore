@@ -1,0 +1,13 @@
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+!.env.example
+node_modules/
+server/dist/
+server/.data/
+*.log
+Config/Local.xcconfig

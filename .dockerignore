@@ -1,0 +1,9 @@
+.git
+.env
+**/.env
+**/node_modules
+**/.data
+server/dist
+build
+DerivedData
+*.xcresult

@@ -5,6 +5,7 @@ struct ProfileView: View {
     @State private var showConnection = false
     @State private var showProfile = false
     @State private var showDelete = false
+    @State private var returningToLive = false
     var body: some View {
         List {
             if let user = store.user {
@@ -18,7 +19,7 @@ struct ProfileView: View {
                 Section {
                     NavigationLink { PostFeedView(query: FeedQuery(scope: .mine), title: "Your adoption posts", emptyTitle: "Someone needs your help", emptyMessage: "Create an adoption post from the Discover tab. Your posts and adoption updates will appear here.") } label: { Label("Your adoption posts", systemImage: "pawprint") }
                     NavigationLink { CountriesView() } label: { Label("Followed countries", systemImage: "globe.europe.africa") }
-                    ShareLink(item: store.invitation) { Label("Invite a friend", systemImage: "person.badge.plus") }.accessibilityIdentifier("inviteFriend")
+                    InvitationShareLink()
                 }
                 if user.isAdmin {
                     Section {
@@ -39,6 +40,15 @@ struct ProfileView: View {
                     Picker("Sample account", selection: Binding(get: { store.user?.id ?? "" }, set: { id in do { try store.switchDemoUser(id) } catch { store.errorMessage = error.localizedDescription } })) {
                         ForEach(store.demoUsers) { user in Text("\(user.name) · \(user.isAdmin ? "Administrator" : "Regular user")").tag(user.id) }
                     }.accessibilityIdentifier("sampleAccount")
+                    if let address = store.liveServerAddress {
+                        Button(returningToLive ? "Connecting…" : "Return to live app") {
+                            returningToLive = true
+                            Task {
+                                do { try await store.connect(to: address) } catch { store.errorMessage = error.localizedDescription }
+                                returningToLive = false
+                            }
+                        }.disabled(returningToLive).accessibilityIdentifier("returnLiveApp")
+                    }
                 } else if let server = store.serverURL {
                     LabeledContent("Connected server", value: server.host ?? "").font(.caption)
                 }
@@ -82,7 +92,9 @@ struct AuthenticationView: View {
                     Section {
                         if registering { TextField("Your name or shelter name", text: $name).textContentType(.name).accessibilityIdentifier("authName") }
                         TextField("Email", text: $email).keyboardType(.emailAddress).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("authEmail")
-                        SecureField("Password (10 or more characters)", text: $password).textContentType(registering ? .newPassword : .password).accessibilityIdentifier("authPassword")
+                        SecureField("Password (10 or more characters)", text: $password)
+                            .textContentType(registering && !ProcessInfo.processInfo.arguments.contains("--uitesting") ? .newPassword : .password)
+                            .accessibilityIdentifier("authPassword")
                         if registering { Button { showCountry = true } label: { LabeledContent("Home country", value: "\(store.country(country).flag) \(store.country(country).name)") } }
                     }
                     if let error { Section { Text(error).font(.subheadline).foregroundStyle(.red) } }

@@ -112,3 +112,34 @@ struct PreviewBanner: View {
             .accessibilityElement(children: .combine)
     }
 }
+
+struct PostShareLink: View {
+    @Environment(AdoptionStore.self) private var store
+    let post: AdoptionPost
+    var body: some View {
+        Group {
+            if let url = store.shareURL(for: post) {
+                ShareLink(item: url, subject: Text("Meet \(post.name)"), message: Text(store.shareMessage(for: post))) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            } else {
+                ShareLink(item: store.shareText(for: post)) { Image(systemName: "square.and.arrow.up") }
+            }
+        }.accessibilityLabel("Share \(post.name)")
+    }
+}
+
+struct InvitationShareLink: View {
+    @Environment(AdoptionStore.self) private var store
+    var body: some View {
+        Group {
+            if let url = store.invitationURL {
+                ShareLink(item: url, subject: Text("Join Heart Adoption"), message: Text("Help dogs and cats find their people.")) {
+                    Label("Invite a friend", systemImage: "person.badge.plus")
+                }
+            } else {
+                ShareLink(item: store.invitation) { Label("Invite a friend", systemImage: "person.badge.plus") }
+            }
+        }.accessibilityIdentifier("inviteFriend")
+    }
+}

@@ -142,7 +142,10 @@ struct ModerationPage: Codable { var posts: [AdoptionPost]; var reports: [PostRe
 
 enum AppFailure: LocalizedError {
     case message(String)
-    var errorDescription: String? { if case .message(let value) = self { return value }; return nil }
+    case server(status: Int, message: String)
+    var errorDescription: String? {
+        switch self { case .message(let value), .server(_, let value): return value }
+    }
 }
 
 enum AppJSON {

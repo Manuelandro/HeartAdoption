@@ -3,6 +3,33 @@ import UIKit
 @testable import HeartAdoption
 
 final class LiveAPITests: XCTestCase {
+    @MainActor func testExpiredSessionDoesNotBlockReturningToLiveBrowsing() async throws {
+        let url = URL(string: "http://localhost:8787")!
+        struct Health: Decodable { let status: String }
+        do { let _: Health = try await APIClient(baseURL: url).request("GET", "health") }
+        catch { throw XCTSkip("Start the local API to check session recovery.") }
+        let oldToken = SessionKeychain.read(server: url)
+        let defaults = UserDefaults.standard
+        let oldServer = defaults.string(forKey: "serverURL")
+        let oldLastServer = defaults.string(forKey: "lastServerURL")
+        defer {
+            if let oldToken { try? SessionKeychain.save(oldToken, server: url) } else { SessionKeychain.remove(server: url) }
+            if let oldServer { defaults.set(oldServer, forKey: "serverURL") } else { defaults.removeObject(forKey: "serverURL") }
+            if let oldLastServer { defaults.set(oldLastServer, forKey: "lastServerURL") } else { defaults.removeObject(forKey: "lastServerURL") }
+        }
+        try SessionKeychain.save(String(repeating: "x", count: 43), server: url)
+        let store = AdoptionStore()
+        try await store.connect(to: url.absoluteString)
+        XCTAssertNil(store.user)
+        XCTAssertNil(SessionKeychain.read(server: url))
+        XCTAssertEqual(store.countries.count, 249)
+        store.useDemo()
+        XCTAssertEqual(store.liveServerAddress, url.absoluteString)
+        try await store.connect(to: try XCTUnwrap(store.liveServerAddress))
+        XCTAssertNil(store.user)
+        XCTAssertEqual(store.serverURL, url)
+    }
+
     /// Runs against the developer's running API; CI uses the isolated server suite.
     func testNativeClientAgainstRunningAPI() async throws {
         let base = URL(string: "http://localhost:8787")!

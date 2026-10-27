@@ -16,13 +16,18 @@ import Observation
     var isDemo: Bool { serverURL == nil }
     var demoUsers: [AppUser] { demo.users }
     var api: APIClient? { serverURL.map { APIClient(baseURL: $0, token: sessionToken) } }
+    var liveServerAddress: String? {
+        let candidates = [UserDefaults.standard.string(forKey: "lastServerURL"), Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String]
+        return candidates.compactMap { $0 }.first { (try? APIClient.validatedURL($0)) != nil }
+    }
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
         demo = DemoRepository(reset: arguments.contains("--uitesting"))
         let unitTestHost = ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
-        if arguments.contains("--demo") || arguments.contains("--uitesting") || unitTestHost { serverURL = nil }
+        if arguments.contains("--demo") || unitTestHost { serverURL = nil }
         else if let index = arguments.firstIndex(of: "--api-url"), arguments.indices.contains(index + 1) { serverURL = try? APIClient.validatedURL(arguments[index + 1]) }
+        else if arguments.contains("--uitesting") { serverURL = nil }
         else {
             let configured = UserDefaults.standard.string(forKey: "serverURL") ?? (Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String ?? "")
             serverURL = try? APIClient.validatedURL(configured)
@@ -35,23 +40,35 @@ import Observation
         guard let api else { return }
         isLoading = true; defer { isLoading = false }
         do {
-            if sessionToken != nil { user = try await api.request("GET", "v1/me") }
-            countries = try await api.request("GET", "v1/countries")
+            if sessionToken != nil {
+                do { user = try await api.request("GET", "v1/me") }
+                catch AppFailure.server(401, _) {
+                    if let serverURL { SessionKeychain.remove(server: serverURL) }
+                    sessionToken = nil; user = nil
+                }
+            }
+            countries = try await self.api!.request("GET", "v1/countries")
+            revision += 1
         } catch { errorMessage = error.localizedDescription }
     }
     func connect(to text: String) async throws {
         let url = try APIClient.validatedURL(text)
         struct Health: Decodable { let status: String }
         let _: Health = try await APIClient(baseURL: url).request("GET", "health")
-        let saved = SessionKeychain.read(server: url)
-        let client = APIClient(baseURL: url, token: saved)
-        let newUser: AppUser? = saved != nil ? try await client.request("GET", "v1/me") : nil
-        let newCountries: [Country] = try await client.request("GET", "v1/countries")
+        var saved = SessionKeychain.read(server: url)
+        var newUser: AppUser?
+        if saved != nil {
+            do { newUser = try await APIClient(baseURL: url, token: saved).request("GET", "v1/me") }
+            catch AppFailure.server(401, _) { SessionKeychain.remove(server: url); saved = nil }
+        }
+        let newCountries: [Country] = try await APIClient(baseURL: url, token: saved).request("GET", "v1/countries")
         serverURL = url; sessionToken = saved; user = newUser; countries = newCountries
         UserDefaults.standard.set(url.absoluteString, forKey: "serverURL")
+        UserDefaults.standard.set(url.absoluteString, forKey: "lastServerURL")
         postsByID.removeAll(); revision += 1
     }
     func useDemo() {
+        if let serverURL { UserDefaults.standard.set(serverURL.absoluteString, forKey: "lastServerURL") }
         serverURL = nil; sessionToken = nil; user = demo.user
         UserDefaults.standard.set("", forKey: "serverURL")
         postsByID.removeAll(); updateDemoCountries(); revision += 1
@@ -181,8 +198,13 @@ import Observation
         else { try demo.resolve(id) }
         revision += 1
     }
+    func shareURL(for post: AdoptionPost) -> URL? { serverURL?.appending(path: "p/\(post.id)") }
+    var invitationURL: URL? { serverURL?.appending(path: "invite") }
+    func shareMessage(for post: AdoptionPost) -> String {
+        "Meet \(post.name), a \(post.species.rawValue) looking for a home in \(post.city), \(country(post.countryCode).name)."
+    }
     func shareText(for post: AdoptionPost) -> String {
-        if let serverURL { return "Meet \(post.name), a \(post.species.rawValue) looking for a home in \(post.city), \(country(post.countryCode).name).\n\(serverURL.appending(path: "p/\(post.id)").absoluteString)" }
+        if let url = shareURL(for: post) { return "\(shareMessage(for: post))\n\(url.absoluteString)" }
         return "Meet \(post.name) in the Heart Adoption app preview. This is a sample adoption post."
     }
     var invitation: String {

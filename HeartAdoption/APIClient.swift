@@ -21,7 +21,7 @@ struct APIClient {
         guard (200..<300).contains(response.statusCode) else {
             struct ServerError: Decodable { let message: String }
             let message = (try? JSONDecoder().decode(ServerError.self, from: data).message) ?? "The request failed. Please try again."
-            throw AppFailure.message(message)
+            throw AppFailure.server(status: response.statusCode, message: message)
         }
         return data
     }

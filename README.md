@@ -66,7 +66,7 @@ xcodebuild -project HeartAdoption.xcodeproj -scheme HeartAdoption \
   -parallel-testing-enabled NO test
 ```
 
-Choose a simulator name installed on your Mac. Keep the default simulator signing enabled so Keychain can store sessions. Native tests check persistence and country permissions; UI tests cover discovery, cross-country search, follows, likes, posting, sharing, and moderation. The live-client native test runs when a local API is available and skips otherwise.
+Choose a simulator name installed on your Mac. Keep the default simulator signing enabled so Keychain can store sessions. Native tests check persistence and country permissions; UI tests cover discovery, cross-country search, follows, likes, posting, sharing, and moderation. The connected-account UI test and live-client native test run when a local API is available and skip otherwise. To run them with an isolated, in-memory database, start `npm run dev -- --local --ephemeral` in `server` first.
 
 `python3 scripts/generate-project.py` regenerates the checked-in Xcode project after adding Swift files. `node scripts/generate-countries.mjs` regenerates the country catalog. `swift scripts/create-assets.swift` regenerates the original vector-drawn app icon.
 

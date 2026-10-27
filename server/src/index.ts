@@ -1,7 +1,9 @@
 import { connectDatabase, migrate } from './database.js';
 import { createApp } from './app.js';
 
-const connection = process.env.DATABASE_URL ?? 'pglite://.data/local';
+const ephemeral = process.argv.includes('--ephemeral');
+if (ephemeral && process.env.NODE_ENV === 'production') throw new Error('--ephemeral is only available in development.');
+const connection = ephemeral ? 'pglite://' : process.env.DATABASE_URL ?? 'pglite://.data/local';
 if (process.env.NODE_ENV === 'production' && (!process.env.DATABASE_URL || connection.startsWith('pglite:'))) throw new Error('Production requires a Neon DATABASE_URL.');
 const local = process.argv.includes('--local');
 if (local && process.env.NODE_ENV === 'production') throw new Error('--local is only available in development.');

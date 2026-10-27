@@ -56,7 +56,7 @@ struct PostDetailView: View {
             }.padding(20).padding(.bottom, 12).frame(maxWidth: 650).frame(maxWidth: .infinity)
         }
         .background(HATheme.background).navigationTitle("Meet \(post.name)").navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { ShareLink(item: store.shareText(for: post)) { Image(systemName: "square.and.arrow.up") }.accessibilityLabel("Share \(post.name)") } }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { PostShareLink(post: post) } }
         .safeAreaInset(edge: .bottom) {
             if post.status == .available {
                 Group {

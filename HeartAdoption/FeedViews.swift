@@ -163,7 +163,7 @@ struct AnimalCard: View {
                     Image(systemName: "mappin.and.ellipse").font(.caption)
                     Text("\(post.city), \(store.country(post.countryCode).name)").font(.caption.weight(.medium))
                     Spacer()
-                    ShareLink(item: store.shareText(for: post)) { Image(systemName: "square.and.arrow.up").font(.subheadline).frame(width: 36, height: 30) }.accessibilityLabel("Share \(post.name)")
+                    PostShareLink(post: post).font(.subheadline).frame(width: 36, height: 30)
                 }.foregroundStyle(HATheme.muted)
             }.padding(.horizontal, 18).padding(.vertical, 15)
         }.background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 25))

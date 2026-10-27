@@ -20,7 +20,8 @@ import Observation
     init() {
         let arguments = ProcessInfo.processInfo.arguments
         demo = DemoRepository(reset: arguments.contains("--uitesting"))
-        if arguments.contains("--demo") || arguments.contains("--uitesting") { serverURL = nil }
+        let unitTestHost = ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
+        if arguments.contains("--demo") || arguments.contains("--uitesting") || unitTestHost { serverURL = nil }
         else if let index = arguments.firstIndex(of: "--api-url"), arguments.indices.contains(index + 1) { serverURL = try? APIClient.validatedURL(arguments[index + 1]) }
         else {
             let configured = UserDefaults.standard.string(forKey: "serverURL") ?? (Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String ?? "")

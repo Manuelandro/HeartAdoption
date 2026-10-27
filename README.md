@@ -6,7 +6,7 @@ Native SwiftUI app for helping shelter and street dogs and cats find homes, with
 
 Open `HeartAdoption.xcodeproj`, choose the **HeartAdoption** scheme and an iPhone Simulator, and run. No third-party Swift packages are needed.
 
-Without a server address, the app opens a labelled preview with bundled sample photos. Preview posts, likes, and country follows persist locally. **You → Sample account** switches between Alex (regular user) and Sofia (administrator for Italy and Greece). These accounts never grant permissions on a connected server.
+The app connects to the deployed Neon Function by default. **You → Explore the app preview** opens a labelled sample world with bundled photos. Preview posts, likes, and country follows persist locally. **You → Sample account** switches between Alex (regular user) and Sofia (administrator for Italy and Greece). These accounts never grant permissions on a connected server.
 
 ## Run with Neon
 
@@ -71,6 +71,32 @@ Choose a simulator name installed on your Mac. Keep the default simulator signin
 `python3 scripts/generate-project.py` regenerates the checked-in Xcode project after adding Swift files. `node scripts/generate-countries.mjs` regenerates the country catalog. `swift scripts/create-assets.swift` regenerates the original vector-drawn app icon.
 
 ## Deploy the API
+
+The production API runs on [Neon Functions](https://neon.com/docs/compute/functions/overview) in the same Frankfurt region as Postgres:
+
+`https://br-restless-sun-b94jjzho-heartadoption.compute.c-7.eu-central-1.aws.neon.tech`
+
+`server/src/neon-function.ts` exports Neon's Fetch handler and reuses the same API routes and authorization. The function keeps a small Postgres pool per isolate. Basic request throttles are per isolate; they are not an edge firewall or a shared cross-isolate quota.
+
+Build a deployment archive from any supported development machine:
+
+```sh
+cd server
+npm run build:function
+```
+
+The builder bundles JavaScript, downloads the Linux ARM64/glibc Sharp prebuilds pinned in the lockfile, verifies their SHA-512 checksums, and writes `build/heart-adoption-function.zip`. Development PGlite and database credentials are excluded from the archive. Neon runs `index.mjs` on Node 24. The platform's `PUBLIC_URL` must be set to the function's invocation origin, and `DATABASE_URL` must point to the migrated adoption database. Apply migrations before publishing a new function version.
+
+For a deployment check against the real public endpoint (using temporary accounts cleaned up afterward):
+
+```sh
+cd server
+npm run dev -- --verify-public
+```
+
+The Neon management API key and project/branch identifiers are read from the ignored `server/.env` for deployment administration. They never belong in the app or function archive. The native app contains only the public API origin.
+
+### Alternative container host
 
 The root `Dockerfile` builds the API. Deploy it to an HTTPS-capable container host with:
 

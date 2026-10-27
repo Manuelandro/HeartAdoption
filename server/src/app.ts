@@ -30,7 +30,7 @@ const credentials = z.object({ email: z.email().max(254).transform(s => s.toLowe
 const idOf = (request: FastifyRequest) => uuid.parse((request.params as { id: string }).id);
 const escaped = (text: string) => text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-export interface AppOptions { publicURL: string; appStoreURL?: string; logger?: boolean; rateLimits?: boolean }
+export interface AppOptions { publicURL: string; appStoreURL?: string; logger?: boolean; rateLimits?: boolean; accountRateLimits?: boolean }
 
 export async function createApp(db: Database, options: AppOptions) {
   const app = Fastify({
@@ -39,7 +39,17 @@ export async function createApp(db: Database, options: AppOptions) {
     requestTimeout: 30_000,
   });
   const base = options.publicURL.replace(/\/$/, '');
-  if (options.rateLimits !== false) await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  if (options.rateLimits !== false) await app.register(rateLimit, {
+    max: 300, timeWindow: '1 minute', hook: 'preHandler',
+    keyGenerator: request => {
+      if (!options.accountRateLimits) return request.ip;
+      // Fetch runtimes have no trusted socket IP. Never trust client forwarding headers.
+      if (request.headers.authorization) return tokenHash(request.headers.authorization);
+      const body = request.body as { email?: unknown } | undefined;
+      if (typeof body?.email === 'string') return tokenHash(body.email.trim().toLowerCase());
+      return 'public-read-budget';
+    },
+  });
   const dummyPassword = await hashPassword(randomUUID());
 
   app.addHook('onSend', async (_request, reply) => {

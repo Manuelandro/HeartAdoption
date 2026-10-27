@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx --env-file-if-exists=.env src/index.ts",
     "build": "tsc",
+    "build:function": "node scripts/build-function.mjs",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "test": "tsx --test test/*.test.ts",
     "admin": "tsx --env-file-if-exists=.env src/admin.ts"
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
+    "esbuild": "^0.28.2",
     "@types/pg": "^8.15.6",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

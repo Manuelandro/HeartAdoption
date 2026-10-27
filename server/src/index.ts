@@ -15,6 +15,11 @@ if (process.argv.includes('--verify-neon')) {
   finally { await db.close(); }
   process.exit(0);
 }
+if (process.argv.includes('--verify-public')) {
+  try { await (await import('./verify-public.js')).verifyPublic(db, publicURL); }
+  finally { await db.close(); }
+  process.exit(0);
+}
 const app = await createApp(db, { publicURL, appStoreURL: process.env.APP_STORE_URL, logger: true });
 await app.listen({ port, host: local ? '127.0.0.1' : process.env.HOST ?? '127.0.0.1' });
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, async () => { await app.close(); await db.close(); process.exit(0); });

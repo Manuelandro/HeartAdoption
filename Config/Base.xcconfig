@@ -1,2 +1,2 @@
-API_BASE_URL =
+API_BASE_URL = https:/$()/br-restless-sun-b94jjzho-heartadoption.compute.c-7.eu-central-1.aws.neon.tech
 #include? "Local.xcconfig"
